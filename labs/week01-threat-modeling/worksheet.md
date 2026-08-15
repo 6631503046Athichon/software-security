@@ -7,17 +7,32 @@
 > **Ethics note:** This week is *modeling only* — you analyze design, you do **not** attack the app. Run the sample app only on your own VM/localhost. Never apply these techniques to systems you do not own or lack written permission to test.
 
 ## Part 1 — Student Information
-| Name | Student ID | Date | Group |
-|---|---|---|---|
-| | | | |
+|       Name     | Student ID |   Date   | Group |
+|       ---      |      ---   |    ---   |  ---  |
+| Athichon kaewla| 6631503046 | 15/8/2569|       |
 
 ## Part 2 — Lecture Questions
 Answer in your own words (2–4 sentences each).
 1. Define the CIA triad and give one concrete failure example for each of the three properties.
+   1.1: Confidentialty = Only authorized users can read it ,failure example Being subjected to a data leak
+   1.2: Integrity =  The information must be accurate ,failure example Data hacking and modification
+   1.3: Availability = The systems and data must be available ,failure example DDoS attacks are aimed at crashing a server and rendering it unusable
+
 2. What is a *trust boundary*, and why does data crossing one deserve extra scrutiny?
+   where data crosses between components of different privilege ， trust：don't know where this information came from
+
 3. Explain "attack surface." Name two things that increase it in a web app.
+   Attack surface = every input an attacker can reach ,HTTP ,params , headers, cookies, file uploads, APIs, env vars, dependencies
+   example : 1 Committing an environment variable to GitHub ,2 Logging in without authentication
+
 4. What does each STRIDE letter map to, and which security property does each threat violate?
+S: Autherntication ，threat : Spoofing ，           T: Integrity        ，threat : Tampering
+R: Non-repudiation ，threat : Repudiation，         I： Confidentiality ，threat : Information Disclosure
+D: Availability    ， threat : Denial of Service ， E: Authorization    ， threat : Elevation of Privilege
+
 5. What does "Secure by Design" (CISA) mean, and how does it differ from bolting security on after release?
+A software and technology development approach that emphasizes security from the design and architecture stages
+Secure by Design: Proactive protection, eliminating vulnerabilities from the start
 
 ## Part 3 — Hands-on Lab (180 min)
 **Learning goals:** build a data-flow diagram (DFD), apply STRIDE to a real Flask app, rank risks, and propose mitigations.
@@ -41,8 +56,10 @@ Source to model lives in `sample-app/app.py`. Template to fill: `THREAT-MODEL-TE
 **What to submit per task:** the threat/element identified + a screenshot (DFD, table, or running app) + a 2–3 sentence mitigation.
 
 **Task 0 — Onboarding (5 min)** · *Goal:* prove the environment works. *Steps:* `docker compose up`, hit `/notes` and `/files/<name>`, read `sample-app/app.py`. *Deliverable:* screenshot of the running app + the JSON response.
+![alt text](<Screenshot 2026-08-15 151719.png>)
 
 **Task 1 — Draw the DFD (25 min)** · *Goal:* map the system. *Steps:* identify the external entity (web client), the process (Flask app), the data store (`notes.db` SQLite), the `uploads/` store, and the flows for `/notes`, `/upload`, `/files/<name>`; mark the Internet→app trust boundary with a dashed line. *Deliverable:* DFD image embedded in your copy of the template.
+![alt text](image.png)
 
 **Task 2 — STRIDE the elements (30 min)** · *Goal:* enumerate threats per element. *Steps:* for each element fill the S/T/R/I/D/E grid. Ground it in real code: `/notes` accepts a client-supplied `owner` with no auth (Spoofing); `/upload` saves raw `f.filename` — arbitrary-file-write (Tampering) — and echoes the resolved save path back in its response (Information disclosure); `/files/<name>` reads it back but is comparatively defended (see Task 5); no logging anywhere (Repudiation). *Deliverable:* completed STRIDE table.
 

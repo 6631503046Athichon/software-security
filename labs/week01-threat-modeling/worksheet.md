@@ -313,6 +313,7 @@ Week 1 is modelling only, and the depth belongs in `project/REPORT-TEMPLATE.md`.
 **Task 8 — Defend / fix it: rank & mitigate (25 min) 🛡️** · *Goal:* turn threats into action you can prove. *Steps:* rank the top 5 threats by likelihood × impact; propose one concrete mitigation each (e.g., auth on `/notes`, `secure_filename()` + allowlist for `/upload`, request logging for Repudiation, size/rate limits for DoS). Then **pick one and actually implement it** in your fork.
 ![alt text](01.png)
 ![alt text](02.png)
+![alt text](<Screenshot 2026-08-16 111947.png>)
 
 
 

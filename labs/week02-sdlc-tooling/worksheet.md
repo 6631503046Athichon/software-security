@@ -51,10 +51,6 @@ Target under scan: `vulnerable-repo/app.py` (plus `requirements.txt`). It contai
 **Task 0 — Onboarding (5 min)** · *Goal:* confirm tooling. *Steps:* run `bash scan.sh`; confirm both Semgrep and Gitleaks sections produce output. *Deliverable:* screenshot showing both tools ran.
 ![alt text](<Screenshot 2026-08-16 133218.png>)
 ![alt text](<Screenshot 2026-08-16 133237.png>)
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 
 **Task 1 — SAST sweep with Semgrep (25 min)** · *Goal:* find code flaws. *Steps:* read the Semgrep output; locate the SQL injection in `/user` (CWE-89, string-formatted query), the OS command injection in `/ping` (CWE-78, `shell=True`), the weak `md5` password hash (CWE-327), and `debug=True` (CWE-489). *Deliverable:* one screenshot per finding with the file:line.
 ![alt text](<Screenshot 2026-08-16 141739.png>)
@@ -66,6 +62,15 @@ Target under scan: `vulnerable-repo/app.py` (plus `requirements.txt`). It contai
 ![alt text](image-1.png)
 
 **Task 3 — Bug Triage Race (30 min)** · *Goal:* triage accurately. *Steps:* build a table with columns *Tool | File:Line | CWE | Severity | TP/FP | Fix idea*; mark at least 3 true positives and 1 likely false positive and justify each. (Score = TP − misclassified.) *Deliverable:* the completed triage table.
+| Tool     | File:Line    | CWE     | Severity         | TP/FP | Fix idea                                         |
+|----------|--------------|---------|------------------|-------|--------------------------------------------------|
+| Semgrep  | app.py:19-20 | CWE-89  | High (ERROR)     | TP    | Use a parameterized query with a `?` placeholder |
+| Semgrep  | app.py:26    | CWE-78  | High (ERROR)     | TP    | Remove `shell=True` and pass an argument list    |
+| Gitleaks | app.py:11    | CWE-798 | High             | TP    | Move the AWS key to an env var and rotate it     |
+| Gitleaks | app.py:12    | CWE-798 | High             | TP    | Move the DB password to an env var and change it |
+| Semgrep  | app.py:30    | CWE-327 | Medium (WARNING) | TP    | Replace md5 with bcrypt or argon2                |
+| Semgrep  | app.py:33    | CWE-489 | Medium (WARNING) | TP    | Set `debug=False` or read it from an env var     |
+| Semgrep  | app.py:19-20 | CWE-89  | Medium (WARNING) | FP    | No fix needed — Django rule fired on a Flask app |
 
 **Task 4 — Fuzzing intro (10 min)** · *Goal:* see coverage-guided fuzzing find a bug SAST won't. *Steps:* in the `labs/toolbox` container (Apple clang has no libFuzzer runtime), build `clang -g -fsanitize=address,fuzzer harness.c -o fuzz`, then **seed the corpus** and run it:
 `mkdir -p corpus && printf 'FUZ' > corpus/seed && ./fuzz corpus`. It crashes almost immediately with an AddressSanitizer heap-buffer-overflow at `harness.c:23` (the `data[3]` read with no `size > 3` check). Seeding matters: an unseeded `./fuzz` has to rediscover the magic bytes by chance and often finds nothing for minutes — that unpredictability is itself worth a sentence in your write-up. (The deep fuzzing+exploit lab is Week 11.) *Deliverable:* the ASan crash output (or a screenshot) + a 2-sentence note on why fuzzing finds this bug when a linter/SAST pass over the same 4-line check would not.

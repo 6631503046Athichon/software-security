@@ -264,11 +264,7 @@ Item 5 does not prevent the write; it bounds what the write is worth.
 
 **Task 6 — Threat-model the project target (30 min)** · *Goal:* kick off your term project. *Steps:* stop the sample-app first (`docker compose down` — both apps bind host port 8080), then run **NoteVault** (`cd ../../project/starter-app && docker compose up`), draw a quick DFD, and list the top 3 STRIDE threats you'd investigate. *Deliverable:* NoteVault DFD + top-3 threats (reuse these in your project report — `project/REPORT-TEMPLATE.md` in the repo root).
 
-<!-- TODO: run `docker compose down` here, then `cd ../../project/starter-app && docker compose up`,
-     draw the NoteVault DFD and embed the screenshot below (identity stamp in the same image). -->
-![alt text](<Screenshot 2026-08-15 152950.png>)
-
-NoteVault — top 3 STRIDE threats to investigate
+![alt text](image.png)
 
 1. S — Identity can be forged without a password.
    `app.py:83` decodes the session JWT with `algorithms=["HS256", "none"]`, so a token whose

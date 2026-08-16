@@ -7,17 +7,30 @@
 > **Ethics note:** The scanners run only against the provided `vulnerable-repo/` on your own machine. Do not point SAST/secret scanners at third-party repos or production systems without authorization. Treat any secret you find here as fake lab data.
 
 ## Part 1 — Student Information
-| Name | Student ID | Date | Group |
-|---|---|---|---|
-| | | | |
-
+| Name            | Student ID | Date      | Group | 
+|-----------------|------------|-----------|-------|
+| Athichon kaewla | 6631503046 | 16/8/2569 | —     | 
 ## Part 2 — Lecture Questions
 Answer in your own words (2–4 sentences each).
 1. Distinguish SAST, DAST, and SCA — what does each see, and when in the SDLC does each run?
+- SAST = reads the source code without running it and runs earliest, while you write code or on each pull request
+- DAST = tests the app while it is running and runs late, on a deployed build.
+- SCA  = checks the versions of your libraries against known CVEs, and runs at build time in CI
+
 2. What is secret scanning, and why do hardcoded secrets keep ending up in repos?
+- ecret scanning checks your code and full git history for leaked credentials (like API keys and passwords).
+- Hardcoded secrets keep happening because devs paste them in for quick local testing and simply forget to clean up before committing. And once committed, just deleting the line later doesn't erase it from git history.
+
 3. What does "shift-left / DevSecOps" mean in practice for a CI pipeline?
+- Shift left: find issues early cheaper to fix.
+DevSecOps = security automated into the pipeline.
+In practice: CI runs SAST, secret scanning and SCA on every commit/PR and fails the build on HIGH/CRITICAL, so nothing insecure gets merged
+
 4. Why is coverage-guided fuzzing considered the dominant modern bug-finding technique?
+- Fuzzing just throws huge amounts of malformed input at a program and waits for it to break. The coverage-guided kind is effective because it watches which parts of the code each input reaches, keeps the inputs that hit something new, and mutates those further, so it works its way deeper into the program instead of guessing blindly
+
 5. Define true positive vs. false positive in scanner triage, and why misclassifying both directions is costly.
+- A true positive is a finding the scanner reports that really is a vulnerability, and a false positive is a reported issue that poses no actual risk. Misclassifying a true positive as false allows real security flaws into production undetected, while misclassifying a false positive as true wastes developer time and causes alert fatigue, leading teams to ignore future scanner alerts
 
 ![A left to right SDLC pipeline showing SAST at write code, secret scanning at commit, SCA and fuzzing at build, and DAST at deploy, with what each tool cannot see written underneath it.](img/sdlc-gates.svg)
 
@@ -38,6 +51,10 @@ Target under scan: `vulnerable-repo/app.py` (plus `requirements.txt`). It contai
 **Task 0 — Onboarding (5 min)** · *Goal:* confirm tooling. *Steps:* run `bash scan.sh`; confirm both Semgrep and Gitleaks sections produce output. *Deliverable:* screenshot showing both tools ran.
 ![alt text](<Screenshot 2026-08-16 133218.png>)
 ![alt text](<Screenshot 2026-08-16 133237.png>)
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 
 **Task 1 — SAST sweep with Semgrep (25 min)** · *Goal:* find code flaws. *Steps:* read the Semgrep output; locate the SQL injection in `/user` (CWE-89, string-formatted query), the OS command injection in `/ping` (CWE-78, `shell=True`), the weak `md5` password hash (CWE-327), and `debug=True` (CWE-489). *Deliverable:* one screenshot per finding with the file:line.
 ![alt text](<Screenshot 2026-08-16 141739.png>)

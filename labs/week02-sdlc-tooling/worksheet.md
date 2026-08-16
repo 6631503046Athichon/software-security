@@ -36,10 +36,17 @@ Target under scan: `vulnerable-repo/app.py` (plus `requirements.txt`). It contai
 **What to submit per task:** the command/payload run + a screenshot of the finding + a 2–3 sentence mitigation.
 
 **Task 0 — Onboarding (5 min)** · *Goal:* confirm tooling. *Steps:* run `bash scan.sh`; confirm both Semgrep and Gitleaks sections produce output. *Deliverable:* screenshot showing both tools ran.
+![alt text](<Screenshot 2026-08-16 133218.png>)
+![alt text](<Screenshot 2026-08-16 133237.png>)
 
 **Task 1 — SAST sweep with Semgrep (25 min)** · *Goal:* find code flaws. *Steps:* read the Semgrep output; locate the SQL injection in `/user` (CWE-89, string-formatted query), the OS command injection in `/ping` (CWE-78, `shell=True`), the weak `md5` password hash (CWE-327), and `debug=True` (CWE-489). *Deliverable:* one screenshot per finding with the file:line.
+![alt text](<Screenshot 2026-08-16 141739.png>)
+![alt text](<Screenshot 2026-08-16 141811.png>)
+![alt text](<Screenshot 2026-08-16 141826.png>)
+![alt text](<Screenshot 2026-08-16 141848.png>)
 
 **Task 2 — Secret scan with Gitleaks (15 min)** · *Goal:* find leaked credentials. *Steps:* read the Gitleaks output; identify `AWS_SECRET_ACCESS_KEY` and `DB_PASSWORD` (CWE-798). *Deliverable:* screenshot + the rule that fired for each.
+![alt text](image-1.png)
 
 **Task 3 — Bug Triage Race (30 min)** · *Goal:* triage accurately. *Steps:* build a table with columns *Tool | File:Line | CWE | Severity | TP/FP | Fix idea*; mark at least 3 true positives and 1 likely false positive and justify each. (Score = TP − misclassified.) *Deliverable:* the completed triage table.
 

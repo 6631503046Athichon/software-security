@@ -396,27 +396,11 @@ Implemented mitigation: risk 1, arbitrary file write via `/upload`.
   cropped window carries nothing that identifies you, and the lab's own output is
   byte-identical for the whole cohort *by design*, so the stamp is the only thing that makes
   the shot yours. Generic or borrowed evidence is not accepted.
-- **Personalized flag (if this lab issues one):** none — nothing in `labs/week01-threat-modeling`
-  issues a per-student flag this week; the identity stamp in each screenshot is the evidence.
+- **Personalized flag (if this lab issues one):** ____________________
   *Flags are unique per student — submitting another student's flag is a violation. How to submit: **learn.zcr.ai/submit** (full guide: `SUBMISSION.md` in the repo root).*
 - **Explain in your own words** *(graded on your reasoning, not copied text):*
   1. What did you do, and **why did the vulnerability work**?
-
-     I modelled the app rather than attacking it: DFD, STRIDE over every element, the EoP deck
-     against the diagram, then a second pass over the whole system. The vulnerability works
-     because `os.path.join()` joins strings without normalising them, so the client filename in
-     `/upload` (`app.py:34`) is written as a literal path and only resolved by the OS at open()
-     — by which point `uploads/../app.py` is already `/app/app.py`. Nothing ever asks where the
-     file landed.
-
   2. **Why does your fix actually stop it** — and what could still break it?
-
-     The stored name is no longer derived from the client at all — a UUID plus an allow-listed
-     extension — so no attacker-controlled string is left in the path to escape with. What could
-     still break it: the process still runs as root in `/app` beside `notes.db`, so any future
-     write primitive is still full compromise, and the allow-list is a policy that has to be
-     maintained — adding an executable type reopens the path from another direction.
-
 ---
 
 ## 🤖 Audit the AI (required)

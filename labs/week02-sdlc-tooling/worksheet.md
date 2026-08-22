@@ -174,6 +174,48 @@ or DAST, not SAST.
 
 **Task 8 — Defend / fix it (10 min)** · *Goal:* remediate the planted flaws in `vulnerable-repo/app.py`. *Steps:* rewrite `/user` to use a parameterized query (`?` placeholder); remove `shell=True` and pass an argument list in `/ping`; move both secrets to environment variables; replace `md5` with bcrypt/argon2; set `debug=False`. *Deliverable:* a before/after diff for each fix mapped to its CWE.
 
+Full `git diff` of `vulnerable-repo/app.py` (all five fixes):
+
+```diff
+-import sqlite3, hashlib, subprocess
++import os, sqlite3, hashlib, subprocess, bcrypt
+
+ # CWE-798: hardcoded credentials / secret
+-AWS_SECRET_ACCESS_KEY = "hK8pQ2mN5vX9wZ3rT6yU1sA4bC7dE0fG2hJ5kL8"
+-DB_PASSWORD = "xQ7mK2pL9wR4tY6u"
++AWS_SECRET_ACCESS_KEY = os.environ["AWS_SECRET_ACCESS_KEY"]
++DB_PASSWORD = os.environ["DB_PASSWORD"]
+
+ # CWE-89: SQL injection
+-    q = "SELECT * FROM users WHERE name = '%s'" % name
+-    return str(con.execute(q).fetchall())
++    q = "SELECT * FROM users WHERE name = ?"
++    return str(con.execute(q, (name,)).fetchall())
+
+ # CWE-78: OS command injection
+-    return subprocess.check_output("ping -c 1 " + host, shell=True)
++    return subprocess.check_output(["ping", "-c", "1", host])
+
+ # CWE-327: weak password hash
+-    return hashlib.md5(pw.encode()).hexdigest()
++    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt())
+
+ # CWE-489: debug mode
+-    app.run(debug=True)
++    app.run(debug=False)
+```
+
+| # | CWE | Fix | Why it stops the attack |
+|---|-----|-----|-------------------------|
+| 1 | CWE-89  | `?` placeholder + value passed to `execute()` | SQLite treats `name` as data, never as SQL — verified that `' OR '1'='1` now returns 0 rows while a real name still returns its row |
+| 2 | CWE-78  | argument list, no `shell=True` | no shell parses the string, so `; rm -rf /` is just a literal hostname argument to `ping`, not a second command |
+| 3 | CWE-798 | secrets read from `os.environ` | the credentials are no longer in the source, so nothing sensitive is committed to git |
+| 4 | CWE-327 | bcrypt with per-hash salt | bcrypt is deliberately slow and `gensalt()` makes the same password hash differently each time — verified two hashes of `pw123` differ, defeating rainbow tables |
+| 5 | CWE-489 | `debug=False` | disables the Werkzeug interactive debugger, which otherwise runs arbitrary Python from the browser on any error |
+
+*Verification (run in a python:3-alpine container): `ast.parse` OK; SQLi payload → 0 rows (BLOCKED); bcrypt hash1 ≠ hash2.*
+*After capturing this diff the file was restored with `git checkout` — `vulnerable-repo/` must stay vulnerable for the next run of the lab.*
+
 ## Part 4 — Reflection
 1. Map two of your findings to their CWE and to the matching OWASP 2025 category.
 2. Name a real-world breach caused by a hardcoded/leaked secret or an injection flaw, and what control would have caught it pre-release.

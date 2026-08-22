@@ -99,7 +99,7 @@ jobs:
 
       # --- Dependency (SCA) scan: report only ---
       - name: Report — Trivy fs (SCA)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: project/starter-app
@@ -109,7 +109,7 @@ jobs:
 
       # --- IaC / Dockerfile misconfiguration scan: report only ---
       - name: Report — Trivy config (IaC)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: project/starter-app
@@ -118,7 +118,7 @@ jobs:
 
       # --- GATE: re-scan with exit-code 1 so HIGH/CRITICAL FAILS the build ---
       - name: Gate — fail on HIGH/CRITICAL (SCA)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: project/starter-app
@@ -128,7 +128,7 @@ jobs:
           exit-code: "1"          # <-- real failure semantics, not `|| true`
 
       - name: Gate — fail on HIGH/CRITICAL (IaC)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: project/starter-app

@@ -145,8 +145,32 @@ negative, not an absence of secrets.
 ![alt text](<Screenshot 2026-08-16 161825.png>)
 
 **Task 6 — Build a security CI gate (25 min)** · *Goal:* automate the scan (previews Week 15). *Steps:* adapt `../week15-devsecops-pipeline/security-ci.yml` into a workflow that runs Semgrep + Trivy + Gitleaks and **fails on HIGH/CRITICAL**; run it locally (`act`) or commit to your fork and read the Actions log. *Deliverable:* the workflow file + a screenshot of a failing run.
+![alt text](image-3.png)
 
 **Task 7 — SAST blind spots (20 min)** · *Goal:* see what scanners miss. *Steps:* find one real bug in `vulnerable-repo/app.py` (or NoteVault) that Semgrep did **not** flag, and explain why a pattern-based tool missed it. *Deliverable:* the bug + a 2-sentence explanation.
+![alt text](image-4.png)
+
+**The bug — privilege escalation via mass assignment at `/register` (`app.py:114`, CWE-915 / CWE-269).**
+When you register, the app takes the `role` field straight from the request and writes it into the
+users table: `role = request.form.get("role") ... or "user"`. Nothing checks that a self-registering
+user is only allowed to be a plain `user`, so I sent `role=admin` in the register request, logged in
+as that account, and opened `/admin` — it returned the whole users table including every password
+hash. A normal account (no `role` field) got `forbidden` on the same endpoint, which proves the
+`role` I supplied is what made the difference.
+
+**Verified (both accounts logged in, then hit `/admin`):**
+```
+normy      (registered normally)      -> forbidden
+eviluser   (registered role=admin)    -> [ {"username":"alice",...},
+                                          {"username":"admin","role":"admin","password":"0192023a..."}, ... ]
+```
+
+**Why Semgrep did not flag it (2 sentences).** The two lines involved are each individually clean —
+the INSERT uses a `?` placeholder, so there is no injectable string, no `shell=True`, and no pattern
+that any rule is looking for. Semgrep matches *code that is written dangerously*, but this bug is a
+*missing check* — the absence of an allowlist on `role` — and a pattern matcher has nothing to match
+against something that simply isn't there, which is why access-control flaws like this need a human
+or DAST, not SAST.
 
 **Task 8 — Defend / fix it (10 min)** · *Goal:* remediate the planted flaws in `vulnerable-repo/app.py`. *Steps:* rewrite `/user` to use a parameterized query (`?` placeholder); remove `shell=True` and pass an argument list in `/ping`; move both secrets to environment variables; replace `md5` with bcrypt/argon2; set `debug=False`. *Deliverable:* a before/after diff for each fix mapped to its CWE.
 

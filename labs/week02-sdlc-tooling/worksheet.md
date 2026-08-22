@@ -74,8 +74,64 @@ Target under scan: `vulnerable-repo/app.py` (plus `requirements.txt`). It contai
 
 **Task 4 — Fuzzing intro (10 min)** · *Goal:* see coverage-guided fuzzing find a bug SAST won't. *Steps:* in the `labs/toolbox` container (Apple clang has no libFuzzer runtime), build `clang -g -fsanitize=address,fuzzer harness.c -o fuzz`, then **seed the corpus** and run it:
 `mkdir -p corpus && printf 'FUZ' > corpus/seed && ./fuzz corpus`. It crashes almost immediately with an AddressSanitizer heap-buffer-overflow at `harness.c:23` (the `data[3]` read with no `size > 3` check). Seeding matters: an unseeded `./fuzz` has to rediscover the magic bytes by chance and often finds nothing for minutes — that unpredictability is itself worth a sentence in your write-up. (The deep fuzzing+exploit lab is Week 11.) *Deliverable:* the ASan crash output (or a screenshot) + a 2-sentence note on why fuzzing finds this bug when a linter/SAST pass over the same 4-line check would not.
+![alt text](image-2.png)
+
+**Why fuzzing finds this but a linter/SAST would not:**
+- Fuzzing actually *runs* the code, so ASan is watching every memory read as it happens and catches `data[3]` touching one byte past a 3-byte heap buffer — the bug only exists for the exact input `"FUZ"`, where `size` is 3 but the code still reads index 3.
+- A linter or SAST pass only reads the four `if` lines as text and has no idea what `size` will be at runtime, so it cannot prove the last `if` is reachable with `size == 3`, and `data[3]` on its own looks like a completely ordinary array read that no pattern rule would flag.
+
+**On seeding:** with `corpus/seed` = `FUZ` the crash came out of the seed corpus itself — `1 files found in corpus` and then the overflow, before libFuzzer mutated anything. Without a seed the fuzzer has to rediscover the magic bytes `F`,`U`,`Z` by random mutation, so how long it takes is luck rather than a fixed number.
 
 **Task 5 — Scan the project target (40 min)** · *Goal:* apply the tools to your term project. *Steps:* run Semgrep + Gitleaks against **NoteVault** (`../../project/starter-app`); also run an SCA scan: `docker run --rm -v "$PWD/../../project/starter-app:/src" aquasec/trivy fs /src`. *Deliverable:* a findings list (tool, file:line/CVE, CWE) — reuse it in your project vuln report.
+
+| Tool     | File:Line / CVE | Package / Issue              | CWE | Severity |
+|----------|-----------------|------------------------------|-----|----------|
+| Semgrep  | Dockerfile:12   | no USER — container runs root |     | Blocking |
+| Semgrep  | app.py:68-69    | md5 for seeded user hashes    |     | Blocking |
+| Semgrep  | app.py:83       | jwt.decode accepts alg "none" |     | Blocking |
+| Semgrep  | app.py:106-107  | render_template_string        |     | Blocking |
+| Semgrep  | app.py:117      | md5 as password hash          |     | Blocking |
+| Semgrep  | app.py:128-130  | SQL injection at /login       |     | Blocking |
+| Semgrep  | app.py:134      | hardcoded JWT secret          |     | Blocking |
+| Semgrep  | app.py:136      | cookie w/o secure/httponly    |     | Blocking |
+| Semgrep  | app.py:176-179  | SQL injection at /search      |     | Blocking |
+| Semgrep  | app.py:181-182  | XSS — hand-built HTML         |     | Blocking |
+| Semgrep  | app.py:202-204  | command injection shell=True  |     | Blocking |
+| Semgrep  | app.py:209      | debug=True + host 0.0.0.0     |     | Blocking |
+| Gitleaks | — 0 findings    | see note below                | —   | —        |
+| Trivy    | CVE-2023-30861  | Flask 2.0.1 → 2.3.2           |     | HIGH     |
+| Trivy    | CVE-2022-29217  | PyJWT 1.7.1 → 2.4.0           |     | HIGH     |
+| Trivy    | CVE-2026-32597  | PyJWT 1.7.1 → 2.12.0          |     | HIGH     |
+| Trivy    | CVE-2026-48526  | PyJWT 1.7.1 → 2.13.0          |     | HIGH     |
+| Trivy    | CVE-2023-25577  | Werkzeug 2.0.1 → 2.2.3        |     | HIGH     |
+| Trivy    | CVE-2024-34069  | Werkzeug 2.0.1 → 3.0.3        |     | HIGH     |
+| Trivy    | CVE-2021-33503  | urllib3 1.26.4 → 1.26.5       |     | HIGH     |
+| Trivy    | CVE-2023-43804  | urllib3 1.26.4 → 1.26.17      |     | HIGH     |
+| Trivy    | CVE-2025-66418  | urllib3 1.26.4 → 2.6.0        |     | HIGH     |
+| Trivy    | CVE-2025-66471  | urllib3 1.26.4 → 2.6.0        |     | HIGH     |
+| Trivy    | CVE-2026-21441  | urllib3 1.26.4 → 2.6.3        |     | HIGH     |
+| Trivy    | CVE-2026-44431  | urllib3 1.26.4 → 2.7.0        |     | HIGH     |
+
+**Trivy totals:** 32 vulnerabilities in `requirements.txt` — 12 HIGH, 18 MEDIUM, 2 LOW, 0 CRITICAL.
+Only the 12 HIGH are listed above; the MEDIUM/LOW rest are in the screenshot.
+
+**Cross-tool link worth noting:** Semgrep flagged `jwt.decode(tok, SECRET, algorithms=["HS256", "none"])`
+at `app.py:83` — the app *code* accepts the `none` algorithm. Trivy independently flagged that the
+*library* underneath it, PyJWT 1.7.1, carries CVE-2022-29217 (key confusion) and CVE-2026-48526
+(auth bypass via forged JWTs). Neither tool sees the other half: SAST cannot know the library
+version, SCA cannot know how the app calls it. Together they show the session layer is broken from
+both directions.
+
+**Note on the Gitleaks result:** Gitleaks reported `no leaks found`, but NoteVault does hardcode a
+secret — `SECRET = "notevault-dev-secret"` at `app.py:23` and `ENV APP_SECRET=notevault-dev-secret`
+at `Dockerfile:5`. Semgrep caught it (`jwt-python-hardcoded-secret`, `app.py:134`) and Gitleaks did
+not, because Gitleaks matches provider-specific formats (`AKIA…`, `ghp_…`) and an entropy threshold,
+and a hyphenated dictionary-word string is too low-entropy to trip either. So this is a false
+negative, not an absence of secrets.
+
+![alt text](<Screenshot 2026-08-16 161842.png>)
+![alt text](<Screenshot 2026-08-16 154601.png>)
+![alt text](<Screenshot 2026-08-16 161825.png>)
 
 **Task 6 — Build a security CI gate (25 min)** · *Goal:* automate the scan (previews Week 15). *Steps:* adapt `../week15-devsecops-pipeline/security-ci.yml` into a workflow that runs Semgrep + Trivy + Gitleaks and **fails on HIGH/CRITICAL**; run it locally (`act`) or commit to your fork and read the Actions log. *Deliverable:* the workflow file + a screenshot of a failing run.
 

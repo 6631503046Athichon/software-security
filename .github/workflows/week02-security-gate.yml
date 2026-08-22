@@ -1,33 +1,40 @@
 # Sandbox/teaching only; for authorized lab use.
 #
-# Week 15 — DevSecOps security gate (GitHub Actions LAB TEMPLATE).
-# This file lives in the lab dir. To activate it, copy it to
-#   .github/workflows/security-ci.yml
-# in a repo (see README-pipeline.md).
+# Week 2 — Task 6: security CI gate.
+# Adapted from labs/week15-devsecops-pipeline/security-ci.yml.
 #
-# It runs four security tools and FAILS the build on HIGH/CRITICAL:
-#   - Semgrep  (SAST)            CWE-coverage via OWASP rulesets
-#   - Trivy    (SCA + image + IaC)
-#   - Gitleaks (secret scanning)
-# SARIF results upload to the GitHub "Security" tab even when a scan fails
-# (the upload steps use `if: always()`), so reviewers still see findings.
+# Runs three security tools against the term-project target (NoteVault) and
+# FAILS the build on HIGH/CRITICAL:
+#   - Semgrep  (SAST)      p/default + p/owasp-top-ten
+#   - Trivy    (SCA + IaC) dependency CVEs + Dockerfile misconfig
+#   - Gitleaks (secrets)   hardcoded credential scan
 #
-# OWASP 2025: A03 (supply chain), A02 (misconfig), A09 (logging/alerting).
+# Each job is split in two: a REPORT step that prints findings without failing,
+# then a GATE step that re-runs with non-zero exit so the build actually breaks.
+# Splitting them means the log always shows *what* was found before it dies.
+#
+# Scope note: this scans project/starter-app only, not the whole repo. The repo
+# deliberately keeps insecure teaching material under labs/, and .semgrepignore /
+# .gitleaks.toml / Trivy skip-dirs exclude it. Pointing the gate at the project
+# target keeps the result meaningful and matches the manual scans in Task 5.
+#
+# Changed from the Week 15 template: renamed, retargeted to this branch and to
+# project/starter-app, and the SARIF upload steps were removed (they require a
+# GitHub API token and cannot run under `act` locally).
 
-name: security-ci
+name: week02-security-gate
 
-# Run on every push and PR to main, plus manual dispatch.
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [wk02_6631503046]
   workflow_dispatch:
 
-# Least-privilege token: read code, write security events (for SARIF upload).
+# No SARIF upload, so read access is all this needs.
 permissions:
   contents: read
-  security-events: write
+
+env:
+  TARGET: project/starter-app
 
 jobs:
   # ---------------------------------------------------------------
@@ -41,30 +48,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Semgrep scan -> SARIF
-        # Produce SARIF always; do NOT fail here so the SARIF can upload.
-        # The gate (fail on findings) is enforced in the next step.
+      - name: Report — Semgrep findings
         run: |
           semgrep scan \
             --config p/default \
             --config p/owasp-top-ten \
-            --sarif --output semgrep.sarif \
-            --error || true
-
-      - name: Upload Semgrep SARIF
-        if: always()              # upload even if a later step fails
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: semgrep.sarif
-          category: semgrep
+            "$TARGET" || true
 
       - name: Gate — fail on Semgrep findings
         # `--error` makes Semgrep exit non-zero when findings exist.
-        run: semgrep scan --config p/default --config p/owasp-top-ten --error
+        run: |
+          semgrep scan \
+            --config p/default \
+            --config p/owasp-top-ten \
+            --error \
+            "$TARGET"
 
   # ---------------------------------------------------------------
   # 2) Trivy — filesystem (SCA) + IaC/Dockerfile config scan.
-  #    Image scan is included as a commented example (needs a build).
   # ---------------------------------------------------------------
   trivy:
     name: SCA + IaC (Trivy)
@@ -72,46 +73,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # --- Filesystem / dependency (SCA) scan -> SARIF (report, no fail) ---
-      - name: Trivy fs (SCA) -> SARIF
+      # --- Dependency (SCA) scan: report only ---
+      - name: Report — Trivy fs (SCA)
         uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: fs
+          scan-ref: project/starter-app
           scanners: vuln,secret
-          format: sarif
-          output: trivy-fs.sarif
           severity: HIGH,CRITICAL
           exit-code: "0"          # report only; the gate step enforces failure
 
-      - name: Upload Trivy fs SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-fs.sarif
-          category: trivy-fs
-
-      # --- IaC / Dockerfile misconfiguration scan -> SARIF ---
-      - name: Trivy config (IaC) -> SARIF
+      # --- IaC / Dockerfile misconfiguration scan: report only ---
+      - name: Report — Trivy config (IaC)
         uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: config
-          format: sarif
-          output: trivy-config.sarif
+          scan-ref: project/starter-app
           severity: HIGH,CRITICAL
           exit-code: "0"
-
-      - name: Upload Trivy config SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-config.sarif
-          category: trivy-config
 
       # --- GATE: re-scan with exit-code 1 so HIGH/CRITICAL FAILS the build ---
       - name: Gate — fail on HIGH/CRITICAL (SCA)
         uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: fs
+          scan-ref: project/starter-app
           scanners: vuln,secret
           severity: HIGH,CRITICAL
           ignore-unfixed: false
@@ -121,46 +107,26 @@ jobs:
         uses: aquasecurity/trivy-action@0.24.0
         with:
           scan-type: config
+          scan-ref: project/starter-app
           severity: HIGH,CRITICAL
           exit-code: "1"
 
-      # --- OPTIONAL image scan (uncomment once the job builds an image) ---
-      # - name: Build image
-      #   run: docker build -t app:ci .
-      # - name: Gate — fail on image CVEs
-      #   uses: aquasecurity/trivy-action@0.24.0
-      #   with:
-      #     scan-type: image
-      #     image-ref: app:ci
-      #     severity: HIGH,CRITICAL
-      #     exit-code: "1"
-
   # ---------------------------------------------------------------
-  # 3) Gitleaks — secret scanning across the repo + git history.
+  # 3) Gitleaks — secret scanning over the project target.
+  #    --no-git because project/starter-app is a subdirectory, not its own repo.
   # ---------------------------------------------------------------
   gitleaks:
     name: Secrets (Gitleaks)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0          # full history so history-buried secrets are caught
 
-      - name: Gitleaks scan -> SARIF
+      - name: Report — Gitleaks scan
         run: |
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
-            detect -s /repo \
-            --report-format sarif --report-path /repo/gitleaks.sarif \
-            --exit-code 0 -v || true   # report; gate step enforces failure
-
-      - name: Upload Gitleaks SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: gitleaks.sarif
-          category: gitleaks
+            detect --no-git -s "/repo/$TARGET" -v --exit-code 0 || true
 
       - name: Gate — fail if any secret found
         run: |
           docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
-            detect -s /repo --exit-code 1 -v   # <-- non-zero => build fails
+            detect --no-git -s "/repo/$TARGET" -v --exit-code 1

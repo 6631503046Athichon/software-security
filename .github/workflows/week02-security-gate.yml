@@ -48,6 +48,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Guard: a gate that passes because it scanned nothing is worse than one that
+      # fails loudly. Under act the Semgrep gate reported success on a target that
+      # Task 5 had already shown contains 31 findings, so fail fast if the path or
+      # the ruleset is missing rather than reporting a green build.
+      - name: Guard — target exists and rules loaded
+        run: |
+          test -d "$TARGET" || { echo "::error::scan target '$TARGET' not found"; exit 1; }
+          test -f "$TARGET/app.py" || { echo "::error::'$TARGET/app.py' missing — wrong path?"; exit 1; }
+          semgrep scan --config p/default --config p/owasp-top-ten --json \
+            --output /tmp/sg.json "$TARGET" || true
+          n=$(python3 -c "import json;print(len(json.load(open('/tmp/sg.json'))['results']))")
+          echo "Semgrep findings: $n"
+          test "$n" -gt 0 || { echo "::error::0 findings — ruleset almost certainly failed to load"; exit 1; }
+
       - name: Report — Semgrep findings
         run: |
           semgrep scan \
@@ -72,6 +86,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # NOTE: this workflow is meant to run on GitHub Actions, not under `act`.
+      # Two things break locally that do not break on a GitHub runner:
+      #   1. aquasecurity/trivy-action fetches its install script via actions/checkout,
+      #      which needs a GITHUB_TOKEN. GitHub injects one automatically; act has none.
+      #   2. Calling `docker run -v "$PWD:/src"` from inside a job is a trap: the -v path
+      #      is resolved by the host daemon, but $PWD is the path *inside* the job
+      #      container. On a GitHub runner those are the same machine so it works; under
+      #      act they differ, so Trivy mounted an empty dir and reported
+      #      "lstat /src/project/starter-app: no such file or directory".
 
       # --- Dependency (SCA) scan: report only ---
       - name: Report — Trivy fs (SCA)

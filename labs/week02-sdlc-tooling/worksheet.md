@@ -86,34 +86,45 @@ Target under scan: `vulnerable-repo/app.py` (plus `requirements.txt`). It contai
 
 | Tool     | File:Line / CVE | Package / Issue              | CWE | Severity |
 |----------|-----------------|------------------------------|-----|----------|
-| Semgrep  | Dockerfile:12   | no USER — container runs root |     | Blocking |
-| Semgrep  | app.py:68-69    | md5 for seeded user hashes    |     | Blocking |
-| Semgrep  | app.py:83       | jwt.decode accepts alg "none" |     | Blocking |
-| Semgrep  | app.py:106-107  | render_template_string        |     | Blocking |
-| Semgrep  | app.py:117      | md5 as password hash          |     | Blocking |
-| Semgrep  | app.py:128-130  | SQL injection at /login       |     | Blocking |
-| Semgrep  | app.py:134      | hardcoded JWT secret          |     | Blocking |
-| Semgrep  | app.py:136      | cookie w/o secure/httponly    |     | Blocking |
-| Semgrep  | app.py:176-179  | SQL injection at /search      |     | Blocking |
-| Semgrep  | app.py:181-182  | XSS — hand-built HTML         |     | Blocking |
-| Semgrep  | app.py:202-204  | command injection shell=True  |     | Blocking |
-| Semgrep  | app.py:209      | debug=True + host 0.0.0.0     |     | Blocking |
+| Semgrep  | Dockerfile:12   | no USER — container runs root | CWE-250 | Blocking |
+| Semgrep  | app.py:68-69    | md5 for seeded user hashes    | CWE-327 | Blocking |
+| Semgrep  | app.py:83       | jwt.decode accepts alg "none" | CWE-327 | Blocking |
+| Semgrep  | app.py:106-107  | render_template_string        | CWE-96  | Blocking |
+| Semgrep  | app.py:117      | md5 as password hash          | CWE-327 | Blocking |
+| Semgrep  | app.py:128-130  | SQL injection at /login       | CWE-89  | Blocking |
+| Semgrep  | app.py:134      | hardcoded JWT secret          | CWE-522 | Blocking |
+| Semgrep  | app.py:136      | cookie w/o secure/httponly    | CWE-614 | Blocking |
+| Semgrep  | app.py:176-179  | SQL injection at /search      | CWE-89  | Blocking |
+| Semgrep  | app.py:181-182  | XSS — hand-built HTML         | CWE-79  | Blocking |
+| Semgrep  | app.py:202-204  | command injection shell=True  | CWE-78  | Blocking |
+| Semgrep  | app.py:209      | debug=True + host 0.0.0.0     | CWE-489 | Blocking |
 | Gitleaks | — 0 findings    | see note below                | —   | —        |
-| Trivy    | CVE-2023-30861  | Flask 2.0.1 → 2.3.2           |     | HIGH     |
-| Trivy    | CVE-2022-29217  | PyJWT 1.7.1 → 2.4.0           |     | HIGH     |
-| Trivy    | CVE-2026-32597  | PyJWT 1.7.1 → 2.12.0          |     | HIGH     |
-| Trivy    | CVE-2026-48526  | PyJWT 1.7.1 → 2.13.0          |     | HIGH     |
-| Trivy    | CVE-2023-25577  | Werkzeug 2.0.1 → 2.2.3        |     | HIGH     |
-| Trivy    | CVE-2024-34069  | Werkzeug 2.0.1 → 3.0.3        |     | HIGH     |
-| Trivy    | CVE-2021-33503  | urllib3 1.26.4 → 1.26.5       |     | HIGH     |
-| Trivy    | CVE-2023-43804  | urllib3 1.26.4 → 1.26.17      |     | HIGH     |
-| Trivy    | CVE-2025-66418  | urllib3 1.26.4 → 2.6.0        |     | HIGH     |
-| Trivy    | CVE-2025-66471  | urllib3 1.26.4 → 2.6.0        |     | HIGH     |
-| Trivy    | CVE-2026-21441  | urllib3 1.26.4 → 2.6.3        |     | HIGH     |
-| Trivy    | CVE-2026-44431  | urllib3 1.26.4 → 2.7.0        |     | HIGH     |
+| Trivy    | CVE-2023-30861  | Flask 2.0.1 → 2.3.2           | CWE-539 | HIGH     |
+| Trivy    | CVE-2022-29217  | PyJWT 1.7.1 → 2.4.0           | CWE-327 | HIGH     |
+| Trivy    | CVE-2026-32597  | PyJWT 1.7.1 → 2.12.0          | CWE-345 / 347 / 863 | HIGH |
+| Trivy    | CVE-2026-48526  | PyJWT 1.7.1 → 2.13.0          | CWE-287 / 347 | HIGH |
+| Trivy    | CVE-2023-25577  | Werkzeug 2.0.1 → 2.2.3        | CWE-770 | HIGH     |
+| Trivy    | CVE-2024-34069  | Werkzeug 2.0.1 → 3.0.3        | CWE-352 | HIGH     |
+| Trivy    | CVE-2021-33503  | urllib3 1.26.4 → 1.26.5       | CWE-400 | HIGH     |
+| Trivy    | CVE-2023-43804  | urllib3 1.26.4 → 1.26.17      | CWE-200 | HIGH     |
+| Trivy    | CVE-2025-66418  | urllib3 1.26.4 → 2.6.0        | CWE-770 | HIGH     |
+| Trivy    | CVE-2025-66471  | urllib3 1.26.4 → 2.6.0        | CWE-409 | HIGH     |
+| Trivy    | CVE-2026-21441  | urllib3 1.26.4 → 2.6.3        | CWE-409 | HIGH     |
+| Trivy    | CVE-2026-44431  | urllib3 1.26.4 → 2.7.0        | CWE-200 | HIGH     |
 
 **Trivy totals:** 32 vulnerabilities in `requirements.txt` — 12 HIGH, 18 MEDIUM, 2 LOW, 0 CRITICAL.
 Only the 12 HIGH are listed above; the MEDIUM/LOW rest are in the screenshot.
+
+**Where the CWE column came from:** the Semgrep rows use each rule's own `cwe:` metadata in the
+`semgrep-rules` repo; the Trivy rows use the `weaknesses` field of the NVD record for each CVE.
+
+**One CWE I did not take at face value:** the two SQL-injection rows are listed as CWE-89, but the
+Flask rule that fired (`python.flask.security.injection.tainted-sql-string`) declares
+`CWE-704: Incorrect Type Conversion or Cast` in its own metadata — which does not describe SQL
+injection at all. The Django rule that fired on the same lines
+(`sql-injection-using-db-cursor-execute`) declares CWE-89 correctly. So the scanner's CWE label can
+itself be wrong, and taking it without checking would have put the wrong CWE in this report. That is
+a smaller version of the same triage problem as Task 3: the tool's output is a claim, not a fact.
 
 **Cross-tool link worth noting:** Semgrep flagged `jwt.decode(tok, SECRET, algorithms=["HS256", "none"])`
 at `app.py:83` — the app *code* accepts the `none` algorithm. Trivy independently flagged that the

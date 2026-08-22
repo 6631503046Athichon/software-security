@@ -10,6 +10,8 @@
 | Name            | Student ID | Date      | Group | 
 |-----------------|------------|-----------|-------|
 | Athichon kaewla | 6631503046 | 16/8/2569 | —     | 
+
+**AI use disclosure:** I used an AI assistant (Claude) while doing this worksheet — to explain each lab step and the Windows/Docker errors I hit, to look up the CWE mappings in Task 5 from the semgrep-rules metadata and the NVD records, to draft the workflow file in Task 6, and to draft the AI answer that I then audit in the "Audit the AI" section. I ran every command, screenshot, and exploit myself, and I reviewed and rewrote the explanations in my own words.
 ## Part 2 — Lecture Questions
 Answer in your own words (2–4 sentences each).
 1. Distinguish SAST, DAST, and SCA — what does each see, and when in the SDLC does each run?

@@ -252,8 +252,65 @@ Full `git diff` of `vulnerable-repo/app.py` (all five fixes):
 AI is a power tool you must **distrust** — you are graded on your *critique*, not the AI's answer.
 
 1. Ask an AI assistant to exploit **or** fix this week's vulnerability. Paste its full answer.
+
+**Prompt I gave the AI:** *"Fix the security vulnerabilities in this Flask app (vulnerable-repo/app.py): the SQL injection, the command injection, the hardcoded secrets, the weak password hash, and debug mode."*
+
+**The AI's full answer:**
+```python
+import os, sqlite3, hashlib, subprocess, shlex
+from flask import Flask, request
+
+app = Flask(__name__)
+
+# Load secrets from the environment instead of hardcoding them
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "changeme")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "changeme")
+
+@app.route("/user")
+def user():
+    name = request.args.get("name", "")
+    con = sqlite3.connect("app.db")
+    # Fixed: parameterized query
+    q = "SELECT * FROM users WHERE name = ?"
+    return str(con.execute(q, (name,)).fetchall())
+
+@app.route("/ping")
+def ping():
+    host = request.args.get("host", "127.0.0.1")
+    # Fixed: escape the user input so the shell can't be abused
+    return subprocess.check_output("ping -c 1 " + shlex.quote(host), shell=True)
+
+def store_password(pw):
+    # Fixed: use SHA-256 instead of the broken MD5
+    return hashlib.sha256(pw.encode()).hexdigest()
+
+if __name__ == "__main__":
+    app.run(debug=False)
+```
+
 2. **Find what's wrong or risky** in it — insecure code, a subtly incomplete fix, a hallucinated API/function/CVE, a missed edge case, or wrong reasoning. Quote the exact line(s).
+
+The AI got the SQL injection and debug-mode fixes right, but three things are wrong or risky:
+
+- **`return hashlib.sha256(pw.encode()).hexdigest()`** — this is still insecure. SHA-256 is a *fast, general-purpose* hash with no salt, so an attacker with the database can try billions of guesses per second and use rainbow tables, because the same password always produces the same hash. Swapping one fast hash (MD5) for another fast hash (SHA-256) does not fix CWE-327; a password hash must be slow and salted (bcrypt/argon2/scrypt).
+- **`AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "changeme")`** and the `DB_PASSWORD` line — the `"changeme"` default silently re-introduces a hardcoded secret. If the environment variable is unset the app runs with a known credential instead of failing, so the CWE-798 finding is only half-fixed.
+- **`subprocess.check_output("ping -c 1 " + shlex.quote(host), shell=True)`** — this leaves `shell=True`, which is exactly what the task said to remove. `shlex.quote` helps on Linux, but keeping a shell in the loop is fragile (it behaves differently on Windows) and the safe pattern is to drop the shell entirely and pass an argument list.
+
 3. Produce the **correct, verified** version yourself and explain in 2–3 sentences why the AI's output was insufficient.
+
+Correct versions (these are the fixes verified in Task 8):
+```python
+# password hash — slow + salted, not a fast general-purpose hash
+return bcrypt.hashpw(pw.encode(), bcrypt.gensalt())
+
+# secrets — fail loudly if unset, no hardcoded fallback
+AWS_SECRET_ACCESS_KEY = os.environ["AWS_SECRET_ACCESS_KEY"]
+DB_PASSWORD = os.environ["DB_PASSWORD"]
+
+# command — no shell at all, host is a single argument
+return subprocess.check_output(["ping", "-c", "1", host])
+```
+The AI's answer was insufficient because it treated "not MD5" as "secure" and picked SHA-256, which has the same weakness for passwords (fast + unsalted), and it weakened its own secrets fix with a `"changeme"` default that keeps a usable credential in the code. It also left `shell=True` in place, so the command-injection surface is only partly reduced rather than removed — a fix that looks done but still leaves three of the five findings exploitable or half-open.
 
 > Disclose your AI use in the Part 1 table. This task counts toward your **Defense + Reflection** score.
 

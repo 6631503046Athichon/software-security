@@ -14,10 +14,22 @@
 ## Part 2 — Lecture Questions
 Answer in your own words (2–4 sentences each).
 1. Distinguish hashing, encryption, and encoding — and give one job each is the wrong tool for.
+- Hashing—one-way. Turns any input into a fixed-length digest; you can't reverse it. Used for integrity checks and for storing passwords.
+- Encryption—two-way. Uses a key, so it can be decrypted. Used to keep data secret.
+- Encoding (e.g. Base64) — just a change of format so data can be transported. No security whatsoever; anyone can decode it
+
 2. Why is a fast hash like MD5/SHA-1 a bad choice for storing passwords, and what should be used instead?
+MD5 and SHA-1 are bad for passwords because they are too fast, enabling attackers to brute-force hashes at GPU speeds (billions of guesses/sec). Instead, you should use slow, adaptive password hashing algorithms like Argon2id, bcrypt, or PBKDF2, which intentionally add computational cost to make cracking impractical
+
 3. What is a salt, what attack does it defeat, and why must it be unique per password?
+A salt is a random value stored alongside a password hash that defeats rainbow table and bulk-cracking attacks. It must be unique per password so identical passwords produce different hashes, forcing attackers to compute hashes individually for every single account rather than reusing precomputed work
+
 4. Why does AES-ECB leak structure, and what does an authenticated mode like AES-GCM add?
+AES-ECB leaks structure because it encrypts identical 16-byte blocks into identical ciphertext deterministically, leaving structural patterns (like image outlines) visible. AES-GCM fixes this by adding a nonce so repeating plaintexts never produce the same ciphertext, and an authentication tag (AEAD) that detects tampering to prevent bit-flipping attacks, causing decryption to fail instantly if the data is modified.
+
 5. What's the difference between `random` and a CSPRNG (e.g. `secrets`), and where does it matter?
+random uses the Mersenne Twister algorithm, designed for statistical uniformity rather than security; an attacker can reconstruct its internal state from 624 outputs and predict all past and future values. In contrast, a CSPRNG like secrets gathers high-entropy randomness from the OS, making outputs computationally unpredictable. This distinction is critical for security-sensitive values (tokens, session IDs, keys, salts, and nonces), whereas standard random should only be used for non-security tasks like simulations and shuffling.
+
 
 ![Four paired rows showing that password storage, cipher mode, randomness and key source are four separate crypto decisions: MD5 (CWE-916/327) becomes argon2id, AES-ECB with a hardcoded key (CWE-327) becomes AES-GCM with a nonce and tag, a 6-digit random.choice token (CWE-330) becomes secrets.token_urlsafe, and HARDCODED_KEY (CWE-798) becomes a key injected from the environment — so naming AES answers none of the four questions.](img/crypto-misuse.svg)
 

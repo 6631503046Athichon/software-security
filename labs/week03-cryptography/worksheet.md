@@ -7,16 +7,14 @@
 > **Ethics note:** Crack only the hashes provided in `hashes.txt` on your own machine. Password-cracking against accounts or systems you don't own is illegal. Wordlists and recovered values stay inside the lab VM.
 
 ## Part 1 — Student Information
-| Name | Student ID | Date | Group |
-|---|---|---|---|
-| | | | |
+| Name            | Student ID | Date      | Group | 
+|-----------------|------------|-----------|-------|
+| Athichon kaewla | 6631503046 | 23/8/2569 | —     | 
 
 ## Part 2 — Lecture Questions
 Answer in your own words (2–4 sentences each).
 1. Distinguish hashing, encryption, and encoding — and give one job each is the wrong tool for.
-- Hashing—one-way. Turns any input into a fixed-length digest; you can't reverse it. Used for integrity checks and for storing passwords.
-- Encryption—two-way. Uses a key, so it can be decrypted. Used to keep data secret.
-- Encoding (e.g. Base64) — just a change of format so data can be transported. No security whatsoever; anyone can decode it
+Hashing is a one-way function producing a fixed-size digest for integrity/passwords—wrong tool for data you need to recover later. Encryption is a two-way transform using keys to protect confidentiality—wrong tool for storing passwords (if the key leaks, all passwords leak). Encoding (e.g., Base64) merely changes data representation for safe transmission with zero security—wrong tool for hiding or protecting sensitive data
 
 2. Why is a fast hash like MD5/SHA-1 a bad choice for storing passwords, and what should be used instead?
 MD5 and SHA-1 are bad for passwords because they are too fast, enabling attackers to brute-force hashes at GPU speeds (billions of guesses/sec). Instead, you should use slow, adaptive password hashing algorithms like Argon2id, bcrypt, or PBKDF2, which intentionally add computational cost to make cracking impractical
@@ -50,9 +48,12 @@ Targets: `vulnerable_crypto.py` (the misuses), `hashes.txt` (four unsalted MD5s)
 **What to submit per task:** the command/payload run + a screenshot of the result + a 2–3 sentence mitigation.
 
 **Task 0 — Onboarding (5 min)** · *Goal:* see the misuse output. *Steps:* run `python vulnerable_crypto.py`; note the md5 digest, the identical ECB ciphertext blocks, and the short token. *Deliverable:* screenshot of the program output.
+![alt text](image.png)
 
 **Task 1 — Capture the Hash (30 min)** · *Goal:* recover the passwords. *Steps:* strip the comment lines from `hashes.txt`, then run `hashcat -m 0 hashes.txt rockyou.txt` (or the `john --format=raw-md5` equivalent); recover all four plaintexts. *Deliverable:* screenshot of the cracked results (mask any real-looking value). Note in one line why unsalted MD5 fell so fast (CWE-916/327).
+![alt text](image-1.png)
 
+- MD5 is fast, making it easy to guess, and with no salt, you can use pre-made tables and hit all accounts with a single wordlist attack
 ```sim
 aes-modes
 ```

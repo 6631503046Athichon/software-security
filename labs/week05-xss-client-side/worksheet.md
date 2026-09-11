@@ -102,6 +102,14 @@ Without HttpOnly, injected JavaScript can read the session cookie through docume
 ```sim
 xss-context
 ```
+ <body onload="document.forms[0].submit()">
+    <form action="http://localhost:8080/comments" method="POST">
+      <input name="body" value="CSRF posted this comment">
+    </form>
+  </body>
+
+![alt text](image-3.png)
+- CSRF works because the browser automatically attaches the session cookie to a cross-site POST request. With SameSite=Strict, the browser does not send the cookie when the request comes from another site. As a result, the forged POST reaches the server without the victim’s session, so the server cannot treat the request as coming from the logged-in victim
 
 **Task 5 — Defend / fix it (30 min) 🛡️.**
 - *Goal:* prove `fixed_app.py` blocks Tasks 1–3, then show that Task 4's CSRF PoC still gets through and explain why.
@@ -111,6 +119,9 @@ xss-context
   ```
   Re-fire each payload. Expected: `/hello` renders the script **as text** (escape, L21), stored comments render literally (Jinja autoescape, L30–33), a strict CSP header is now present as defense-in-depth (`Content-Security-Policy: script-src 'self'`, L12 — check DevTools → Network → Response Headers; escaping already neutralizes these payloads, so no CSP *violation* fires in the console), and the cookie now has `HttpOnly; SameSite=Strict; Secure` (L42). Then re-run Task 4's `csrf.html` PoC against `fixed_app.py`: it **still posts the forged comment** — `/comments` (L25–28) never checks the `session` cookie or a CSRF token before accepting a POST, so hardening the cookie only stops the browser from *attaching* it cross-site; it doesn't stop the request itself from being processed.
 - *Deliverable:* screenshots of escaped output + the CSP response header + the hardened cookie flags + the still-successful Task 4 forgery against `fixed_app.py`, with 2–3 sentences on why cookie hardening alone doesn't close CSRF here (no server-side check tied to the cookie, and no CSRF token).
+
+![alt text](image-4.png)
+![alt text](image-5.png)
 
 ## Part 4 — Reflection
 

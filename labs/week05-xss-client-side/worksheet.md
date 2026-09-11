@@ -10,7 +10,7 @@
 
 | Name | Student ID | Date | Group |
 |------|-----------|------|-------|
-|      |           |      |       |
+| Athichon kaewla | 6631503046 | 12/9/2569 | — |
 
 ## Part 2 — Lecture Questions
 

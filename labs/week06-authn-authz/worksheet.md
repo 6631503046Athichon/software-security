@@ -19,10 +19,19 @@
 Answer in 2–4 sentences each.
 
 1. Distinguish **authentication** from **authorization**. In `vulnerable_app.py`, `get_order` calls `current_user()` but ignores its result (L63) — which of the two is missing?
+ while authorization answers "What are you allowed to do?" In `get_order`, `current_user()` authenticates the requester, but its result is ignored and there is no check that the requested order belongs to that user. Therefore, authorization is missing.
+
 2. What is **IDOR** (CWE-639)? Why is `/api/orders/<oid>` exploitable, and what single check in `solution_app.py` (L64) closes it?
+IDOR occurs when a user can change an object identifier, such as an order ID, to access another user's object because the server does not check ownership. `/api/orders/<oid>` is vulnerable because it returns the requested order without verifying its owner; `solution_app.py` closes this at L64 by checking `if order["owner"] != user: return 403`.
+
 3. Explain the **`alg:none`** JWT attack. Why does listing `"none"` in `algorithms=[...]` (L55) let an attacker submit an *unsigned* token?
+The `alg:none` attack changes the JWT algorithm to `"none"`, allowing the attacker to create a token with a modified payload and no signature. Because the vulnerable verifier accepts `"none"` in its allowed algorithms, it accepts the unsigned forged token instead of requiring a valid cryptographic signature.
+
 4. Why is the hardcoded HMAC secret `"secret"` (CWE-321) dangerous even if `alg:none` were disabled? How does a strong random secret + pinned algorithm defend the token?
+ Even if `alg:none` is disabled, the hardcoded secret `"secret"` is guessable, so an attacker who discovers it can modify a JWT and generate a valid signature for the forged token. A strong random secret makes guessing the signing key impractical, while pinning the algorithm to `HS256` prevents the verifier from accepting attacker-selected algorithms such as `"none"`.
+
 5. What do the JWT claims **`exp`** and **`aud`** add, and why does the secure version reject tokens that lack them?
+`exp` gives the token an expiration time, preventing it from remaining valid indefinitely, while `aud` identifies the intended audience for the token. The secure version requires both claims so that tokens without a defined lifetime or intended audience are rejected rather than trusted as valid JWTs.
 
 ## Part 3 — Hands-on Lab (150 min)
 

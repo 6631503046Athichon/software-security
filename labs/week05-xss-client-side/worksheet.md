@@ -10,17 +10,26 @@
 
 | Name | Student ID | Date | Group |
 |------|-----------|------|-------|
-|      |           |      |       |
+| Athichon kaewla | 6631503046 | 11/9/2569 | — |
 
 ## Part 2 — Lecture Questions
 
 Answer in 2–4 sentences each.
 
 1. Distinguish **reflected**, **stored**, and **DOM-based** XSS by *where* the untrusted data is injected and *when* it executes. Which two does our `vulnerable_app.py` implement, and at which routes?
+- Reflected XSS involves malicious data from a request being immediately reflected and executed. Stored XSS occurs when a payload is saved on the server and executed later when someone visits the page. DOM-based XSS happens when client-side JavaScript inserts unsafe data into the DOM. Our application (vulnerable_app.py) only covers Reflected and Stored XSS; DOM XSS is merely an optional target.
+
 2. How does **contextual output encoding** (`markupsafe.escape`) stop `<script>` from executing? Why is HTML-context encoding different from JavaScript- or URL-context encoding?
+- Context-aware output encoding prevents XSS by converting special characters into safe text—for instance, `markupsafe.escape()` converts `<` into `&lt;`, causing `<script>` to be displayed as text rather than executed. Encoding must be tailored to the specific context because HTML, JavaScript, and URLs have different syntaxes.
+
 3. Explain how a strict **Content-Security-Policy** (`script-src 'self'`) defeats an *injected* inline script even when encoding is missing.
+- A strict CSP configured with `script-src 'self'` will block injected inline scripts from executing; the browser will block them even if output encoding fails. However, CSP serves only as an additional layer of defense and is not a substitute for proper encoding.
+
 4. What do the cookie flags **HttpOnly**, **SameSite**, and **Secure** each protect against? Map each to a concrete attack (cookie theft via XSS, CSRF, network sniffing).
+- HttpOnly prevents JavaScript from reading cookies, helping to mitigate cookie theft via XSS. SameSite restricts cookies from being sent with cross-site requests, helping to prevent CSRF. Secure ensures that cookies are sent only over HTTPS, protecting them from network sniffing
+
 5. Why does **CSRF** (CWE-352) work even without any script injection, and how does `SameSite=Strict` plus the same-origin policy blunt it?
+- CSRF does not require script injection because the victim's browser automatically attaches the session cookie to a forged request. The Same-Origin Policy prevents an attacker from reading cross-origin responses, but it does not prevent cross-origin requests from being sent. SameSite=Strict helps prevent CSRF by stopping cookies from being sent with cross-site requests
 
 ## Part 3 — Hands-on Lab (150 min)
 
@@ -47,21 +56,35 @@ docker run --rm -p 3000:3000 bkimminich/juice-shop       # -> http://localhost:3
 ---
 
 **Task 0 — Onboarding (5 min).** Browse `http://localhost:8080/`. Open DevTools → Application → Cookies and confirm `session=abc123` is set with **no HttpOnly / SameSite**. Screenshot it. *Deliverable: screenshot.*
+![alt text](image.png)
 
 **Task 1 — Reflected XSS + XSS Golf (30 min) ⛳.**
 - *Goal:* execute JS via `/hello`, then minimize the payload.
 - *Steps:* visit `/hello?name=<script>alert(1)</script>`, then the alternate `/hello?name=<img src=x onerror=alert(1)>` (useful when `<script>` tags specifically are filtered — note it's actually 3 characters longer, not shorter). Record each payload's character count for your golf score.
 - *Deliverable:* both payloads + char counts + screenshot of `alert(1)` + your lowest score.
+"<script>alert(1)</script>" 25 Length
+"<img src=x onerror=alert(1)>" 28 Length
+"<svg onload=alert(1)>" 21Length
+![alt text](image-1.png)
+Lowest score: 21
+
 
 **Task 2 — Stored XSS (30 min) ⛳.**
 - *Goal:* persist a script that runs for every visitor of `/comments`.
 - *Steps:* POST a comment with body `<script>alert(document.cookie)</script>` (use the form or `curl -d 'body=...'`). Reload `/comments` and watch the cookie pop.
 - *Deliverable:* payload + screenshot of the alert showing `session=abc123` + why stored XSS is more dangerous than reflected.
+<script>alert(document.cookie)</script>
+![alt text](<Screenshot 2026-09-11 173736.png>) 
+![alt text](<Screenshot 2026-09-11 173751.png>)
+Stored XSS is generally more dangerous than reflected XSS because the malicious script is stored on the server and can execute automatically for multiple users who access the affected page
 
 **Task 3 — Cookie theft via XSS (25 min).**
 - *Goal:* show the cookie is readable by injected JS because **HttpOnly is missing** (CWE-1004).
 - *Steps:* store `<script>new Image().src='http://localhost:8080/hello?name='+document.cookie</script>` (a beacon), or simply `<img src=x onerror=alert(document.cookie)>`. Observe the cookie value being exfiltrated/displayed.
 - *Deliverable:* payload + screenshot + 2–3 sentences on how HttpOnly would have stopped this.
+<img src=x onerror=alert(document.cookie)>
+![alt text](image-2.png)
+Without HttpOnly, injected JavaScript can read the session cookie through document.cookie and steal it. With HttpOnly enabled, JavaScript cannot access the cookie, preventing cookie theft. However, HttpOnly does not prevent XSS itself, so output encoding is still required
 
 **Task 4 — CSRF PoC (30 min).**
 - *Goal:* make a third-party page force a state-changing POST to `/comments`.

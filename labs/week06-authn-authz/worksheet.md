@@ -9,7 +9,7 @@
 ## Part 1 — Student Information
 
 | Name | Student ID | Date | Group |
-|Athichon kaewla |-----------|------|-------|
+|Athichon kaewla |6631503046|12/9/2569|-------|
 |      |           |      |       |
 
 ![Diagram of one request passing two gates: Gate 1 authentication accepts an alg:none forgery, a weak-secret forgery, and alice's real token, then Gate 2 authorization fails to check ownership so alice's valid token reads bob's /api/orders/2 as IDOR, with the solution_app.py fixes for both.](img/authn-vs-authz.svg)

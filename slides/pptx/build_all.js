@@ -112,8 +112,10 @@ function parseBlock(block) {
     // has a second "](" inside the alt (two links, not one image).
     const imgMatch = line.trim().match(/^!\[(.*)\]\(([^)\s]+)\)$/);
     if (imgMatch && !imgMatch[1].includes("](")) {
-      const alt = strip(imgMatch[1]);
-      body.push({ t: "raw", v: alt ? `See diagram: ${alt} (web only)` : "See diagram (web only)" });
+      // Kept as an image item: the layout embeds the diagram (SVG rasterised with sharp) and uses the
+      // alt text as the picture's alt text. If the file cannot be found or rendered, the layout falls
+      // back to the old one-line "See diagram: <alt> (web only)" pointer.
+      body.push({ t: "image", alt: strip(imgMatch[1]), src: imgMatch[2] });
       continue;
     }
     body.push({ t: "raw", v: line });
@@ -129,6 +131,7 @@ function organize(body) {
   while (i < body.length) {
     const item = body[i];
     if (item.t === "code") { out.push({ kind: "code", text: item.v }); i++; continue; }
+    if (item.t === "image") { out.push({ kind: "image", alt: item.alt, src: item.src }); i++; continue; }
     const line = item.v;
     if (line.includes("|") && line.trim().startsWith("|")) {
       const rows = [];
@@ -170,6 +173,49 @@ function organize(body) {
     }
     if (paras.length) out.push({ kind: "para", text: paras.join("\n") });
   }
+  return out;
+}
+
+// ---- diagrams ------------------------------------------------------------------------------
+// A slide image `img/<name>` lives in the week's lab directory (labs/weekNN-<slug>/img/), the same place
+// the web renderer resolves it. Only that shape is accepted: a fixed sub-directory, a plain file name and a
+// known extension, so a slide source can never point the generator at an arbitrary file.
+const IMG_RE = /^img\/([A-Za-z0-9][A-Za-z0-9._-]*\.(svg|png|jpe?g))$/;
+const IMG_WIDTH_PX = 1600;           // 2x-3x what a 6-9 in wide picture needs; keeps each PNG at ~20-100 KB
+const _imgCache = new Map();
+
+function labDirFor(ww) {
+  const labs = path.join(REPO, "labs");
+  const d = fs.readdirSync(labs).find((x) => x.startsWith(`week${ww}-`));
+  return d ? path.join(labs, d) : null;
+}
+
+async function loadImage(ww, src) {
+  const m = IMG_RE.exec(src);
+  if (!m) return null;
+  const dir = labDirFor(ww);
+  if (!dir) return null;
+  // m[1] is IMG_RE's capture group, anchored ^...$ over [A-Za-z0-9._-]+ with a known extension —
+  // it cannot contain "/" or "..", so this can never resolve outside dir/img/.
+  const file = path.join(dir, "img", m[1]); // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
+  if (_imgCache.has(file)) return _imgCache.get(file);
+  let out = null;
+  try {
+    const raw = fs.readFileSync(file);
+    let buf;
+    if (m[2] === "svg") {
+      const meta = await sharp(raw).metadata();
+      // density scales the SVG's own viewBox up to IMG_WIDTH_PX wide; palette PNG keeps it small.
+      buf = await sharp(raw, { density: 72 * (IMG_WIDTH_PX / meta.width) }).png({ palette: true, quality: 90, compressionLevel: 9 }).toBuffer();
+    } else {
+      buf = await sharp(raw).resize({ width: IMG_WIDTH_PX, withoutEnlargement: true }).png({ palette: true, quality: 90, compressionLevel: 9 }).toBuffer();
+    }
+    const info = await sharp(buf).metadata();
+    out = { data: "image/png;base64," + buf.toString("base64"), w: info.width, h: info.height };
+  } catch (e) {
+    console.log(`  warn: could not embed ${src} (${e.message}); using the text pointer`);
+  }
+  _imgCache.set(file, out);
   return out;
 }
 
@@ -217,6 +263,12 @@ function organize(body) {
     for (let bi = 1; bi < blocks.length; bi++) {
       const blk = blocks[bi];
       const items = organize(blk.body);
+      for (let k = 0; k < items.length; k++) {
+        if (items[k].kind !== "image") continue;
+        const img = await loadImage(ww, items[k].src);
+        if (img) items[k].img = img;
+        else items[k] = { kind: "para", text: items[k].alt ? `See diagram: ${items[k].alt} (web only)` : "See diagram (web only)" };
+      }
       s = base();
       const titleTxt = blk.title || blk.h1 || "";
 
@@ -247,7 +299,16 @@ function organize(body) {
       const numberedH = (t) => Math.max(0.42, 0.28 * wrapLines(t, 8.3, 13.5) + 0.16);
 
       for (const it of items) {
-        if (it.kind === "table") {
+        if (it.kind === "image") {
+          // Largest size that fits: the picture is the slide's content, so it starts just under the title
+          // and may use the space down to the footer. Anything that follows it moves to a "(cont.)" slide.
+          if (y > 1.46 && y > bottom - 2.2) newPage();
+          const top = y > 1.46 ? y : 1.2, imgBottom = 5.1, maxW = 9.0;
+          const aspect = it.img.w / it.img.h;
+          const h = Math.min(imgBottom - top, maxW / aspect), w = h * aspect;
+          s.addImage({ data: it.img.data, x: 0.5 + (maxW - w) / 2, y: top, w, h, altText: it.alt || "diagram" });
+          y = top + h + 0.14;
+        } else if (it.kind === "table") {
           if (y > bottom - 0.6) newPage();
           const rows = it.rows;
           const colN = Math.max(...rows.map((r) => r.length));
@@ -316,7 +377,8 @@ function organize(body) {
         }
       }
       foot(s, "");
-      if (blk.notes) pages.forEach((pg) => pg.addNotes(blk.notes));
+      const noteText = [blk.notes, ...items.filter((x) => x.kind === "image" && x.alt).map((x) => `Diagram: ${x.alt}`)].filter(Boolean).join("\n\n");
+      if (noteText) pages.forEach((pg) => pg.addNotes(noteText));
     }
 
     const outFile = path.join(OUT, `week${ww}.pptx`);

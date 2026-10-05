@@ -3,7 +3,7 @@
 **Course:** Software Security (KOSEN69) · **Covers:** Weeks 1–6
 **Time:** 150 min · **Total:** 100 pts · **Individual** · Sandbox targets only (ethics policy applies).
 
-**Name:** ____________________  **Student ID:** ____________
+**Name:** Athichon keawla  **Student ID:**6631503046
 
 > Each challenge yields a **flag** in the form `FLAG{...}` (or the proof noted). Submit, per challenge: the **flag**, the **payload/command** you used, and a **one-line mitigation**. Partial credit for documented progress without the flag.
 
@@ -32,13 +32,13 @@
 
 | # | Flag / proof | Payload or command | Mitigation (1 line) |
 |---|---|---|---|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 | | | |
-| 5 | | | |
-| 6 | | | |
-| 7 | | | |
+| 1 |FLAG{sqli_demo} | /login?user=admin'--&pw=x |Use parameterized queries to separate data from the SQL statement|
+| 2 |FLAG{cmdi_demo}|/ping?host=127.0.0.1;cat /flag.txt |Avoid using the shell-pass an argument array and validate input using an allow-list or regex. |
+| 3 |![alt text](image.png)|POST /comments body=<script>alert(document.domain)</script> |escape/encode output (Jinja autoescape / markupsafe.escape) + CSP script-src 'self' |
+| 4 |FLAG{idor_demo} |GET /api/orders/2 + header Authorization: Bearer <alice's token> |Always check object-level permissions on the server side (e.g., `order.owner == current_user`; return 403 if not). |
+| 5 |FLAG{jwt_demo} | Forge a JWT `{"sub":"admin"}` signed with a weak secret (HS256) and perform a GET request to `/api/admin` — method: weak-secret HS256.|Pin the algorithm to HS256, use a long random secret, reject `alg:none`, and validate `exp`/`aud` claims. |
+| 6 |![alt text](image-1.png) |python crack.py (MD5 dictionary attack กับ rockyou.txt) ≈ hashcat -m 0 hashes.txt rockyou.txt |Store passwords using a slow KDF with a salt (e.g., Argon2id or bcrypt) instead of MD5. |
+| 7 |![alt text](image-2.png) |encrypt_ecb(b"A"*16 + b"A"*16).hex() |Use AES-GCM (12-byte random nonce) instead of ECB. |
 
 ---
 

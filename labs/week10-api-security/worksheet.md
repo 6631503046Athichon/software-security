@@ -10,11 +10,13 @@
 
 | Name | Student ID | Date | Group |
 |------|-----------|------|-------|
-|      |           |      |       |
+|Athichon kaewla|6631503046|10/10/2569|-|
 
 ## Part 2 — Lecture Questions
 
 1. Define **BOLA (API1:2023)**. Why is it the #1 API risk, and why can't a WAF reliably stop it?
+เพราะว่า apiถูกใช้งานอย่างที่นิยมแล้วก็มันไม่มีวิธีเช็คว่าใครเป็นใครไม่เหมือนกับระบบ auth ที่ใช้ในการยืนยันตัวตนของต้นเองได้ WAF เพราะว่าตัวapi ไม่สามารถแยกได้ว่าใครเป็นใครและใครที่ส่งคำขอ(req)มา
+
 2. What is **mass assignment / broken object property level authorization (API3:2023)**? Contrast a blocklist vs. an allow-list of bindable fields.
 3. **API4:2023** is unrestricted resource consumption. Give two distinct impacts (security and availability) of an unthrottled `/api/login`.
 4. In `vulnerable_api.py`, `current_user()` trusts the `X-User-Id` header. Why is a client-supplied header NOT authentication, and what should replace it?

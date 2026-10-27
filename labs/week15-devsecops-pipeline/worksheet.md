@@ -10,9 +10,9 @@
 
 ## Part 1 — Student Information
 
-| Name | Student ID | Date | Group | AI tool used |
+| Name | Student ID | Date | Group |
 |------|-----------|------|-------|--------------|
-| athichon kaewla | 6631503046 | 27/10/2569 | - | Antigravity (Gemini) |
+| athichon kaewla | 6631503046 | 27/10/2569 | - 
 
 ---
 

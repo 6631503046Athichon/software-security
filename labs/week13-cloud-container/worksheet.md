@@ -10,9 +10,9 @@
 
 ## Part 1 — Student Information
 
-| Name | Student ID | Date | Group |
+| Name | Student ID | Date | Group | AI tool used |
 |------|-----------|------|-------|--------------|
-| athichon kaewla | 6631503046 | 27/10/2569 | - |
+| athichon kaewla | 6631503046 | 27/10/2569 | - | Antigravity (Gemini) |
 ---
 
 ## Part 2 — Lecture Questions
@@ -52,6 +52,8 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:lates
 **Windows — copy and run this single PowerShell command from any directory.** It prints your identity stamp, checks Docker, and shows a concise Trivy summary:
 
 ![Trivy Scan Summary](evidence/task0-task4-trivy.png)
+
+
 
 
 
